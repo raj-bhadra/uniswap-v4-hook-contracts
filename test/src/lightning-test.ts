@@ -1,28 +1,27 @@
 import {
-    type EciesScheme,
-    encryptionSchemes,
-    type EncryptResultOf,
-    type PlaintextOf,
-    type PlaintextWithContextOf,
-    SupportedFheType
+  type EciesScheme,
+  encryptionSchemes,
+  type EncryptResultOf,
+  type PlaintextOf,
+  type PlaintextWithContextOf,
+  SupportedFheType,
 } from '@inco/js/encryption';
-import { addTwoAbi, incoLightningAbi } from '@inco/js/abis';
+import {addTwoAbi, incoLightningAbi} from '@inco/js/abis';
 import {decodeSecp256k1PublicKey, generateSecp256k1Keypair, getEciesEncryptor, incoLiteReencryptor} from '@inco/js/lite'
-import {type Chainish, getSupportedChain, handleTypes, HexString, parse} from '@inco/js'
+import {handleTypes, HexString} from '@inco/js'
 import {
-    type Account,
-    type Address,
-    type Chain,
-    checksumAddress,
-    createPublicClient,
-    createWalletClient,
-    getContract,
-    type Hex,
-    hexToBytes,
-    http,
-    type PublicClient,
-    type Transport,
-    type WalletClient,
+  type Account,
+  type Address,
+  type Chain,
+  createPublicClient,
+  createWalletClient,
+  getContract,
+  type Hex,
+  hexToBytes,
+  http,
+  type PublicClient,
+  type Transport,
+  type WalletClient,
 } from 'viem';
 import {privateKeyToAccount} from 'viem/accounts';
 import {beforeAll, describe, expect, it} from 'vitest';
@@ -208,6 +207,9 @@ export function runE2ETest(valueToAdd: number, cfg: E2EConfig) {
         address: cfg.incoLiteAddress,
         client: publicClient,
       });
+      if (!incoLite) {
+        throw new Error(`IncoLite contract not found at address ${cfg.incoLiteAddress}`);
+      }
       callbackFulfillPromise = new Promise((resolve) => {
         incoLite.watchEvent.RequestFulfilled({ requestId }, { onLogs: () => resolve() });
       });
@@ -244,18 +246,4 @@ export function runE2ETest(valueToAdd: number, cfg: E2EConfig) {
 
 function prettifyInputCt(hex: HexString): string {
   return `${hex.slice(0, 8)}...${hex.slice(-6)}`;
-}
-
-// Read the AddTwo contract address from the latest deployment log.
-// FIXME: this needs to dispatch of chain id
-export async function getAddTwoContractAddress(chainish: Chainish): Promise<Address> {
-  const chain = getSupportedChain(chainish);
-  const logs = await require(
-    `../../contracts/inco-lite/broadcast/DeployTestContracts.s.sol/${chain.id}/run-latest.json`,
-  );
-  const addr = logs.transactions.find((tx: any) => tx.contractName === 'AddTwo')?.contractAddress;
-  if (!addr) {
-    throw new Error('AddTwo contract address not found');
-  }
-  return checksumAddress(parse(HexString, addr));
 }

@@ -24,7 +24,7 @@
     },
   },
   "overrides": {
-    "@inco/js": "0.1.14",
+    "@inco/js": "0.1.20",
     "@inco/lightning": "0.1.21",
   },
   "packages": {
@@ -116,7 +116,7 @@
 
     "@grpc/proto-loader": ["@grpc/proto-loader@0.7.15", "", { "dependencies": { "lodash.camelcase": "^4.3.0", "long": "^5.0.0", "protobufjs": "^7.2.5", "yargs": "^17.7.2" }, "bin": { "proto-loader-gen-types": "build/bin/proto-loader-gen-types.js" } }, "sha512-tMXdRCfYVixjuFK+Hk0Q1s38gV9zDiDJfWL3h1rv4Qc39oILCu1TRTDt7+fGUI8K4G1Fj125Hx/ru3azECWTyQ=="],
 
-    "@inco/js": ["@inco/js@0.1.14", "", { "dependencies": { "@bufbuild/protobuf": "^2.2.3", "@connectrpc/connect": "^2.0.0", "@connectrpc/connect-node": "^2.0.0", "@connectrpc/connect-web": "^2.0.1", "@cosmjs/proto-signing": "^0.32.4", "@cosmjs/stargate": "^0.32.4", "@cosmjs/tendermint-rpc": "^0.32.4", "@grpc/grpc-js": "^1.12.2", "@types/elliptic": "^6.4.18", "@wagmi/cli": "^2.2.0", "bincode-ts": "^0.1.1", "ecies-geth": "^1.7.5", "effect": "^3.13.6", "sha3": "^2.1.4", "viem": "^2.23.6" } }, "sha512-gHqArbh9ppCpsFnbaAEEusBvuUiEhhULdCRzKIExhgfaJxxs1aqxZuX8H+Qz/et4SRuEoz5Koil4AvD6bv3OlQ=="],
+    "@inco/js": ["@inco/js@0.1.20", "", { "dependencies": { "@bufbuild/protobuf": "^2.2.3", "@connectrpc/connect": "^2.0.0", "@connectrpc/connect-node": "^2.0.0", "@connectrpc/connect-web": "^2.0.1", "@cosmjs/proto-signing": "^0.32.4", "@cosmjs/stargate": "^0.32.4", "@cosmjs/tendermint-rpc": "^0.32.4", "@grpc/grpc-js": "^1.12.2", "@types/elliptic": "^6.4.18", "@wagmi/cli": "^2.2.0", "bincode-ts": "^0.1.1", "ecies-geth": "^1.7.5", "effect": "^3.13.6", "sha3": "^2.1.4", "viem": "^2.23.6" } }, "sha512-ZMX70rtIwDObv6yF2uAZ/24+oXcicwWtMYWJgrwhFs1R/mbrV+4RdGhQ2oyiDYUm4WGzRGhI9Peq0oMExLvbFg=="],
 
     "@inco/lightning": ["@inco/lightning@0.1.21", "", { "dependencies": { "@openzeppelin/contracts": "^5.2.0", "@openzeppelin/contracts-upgradeable": "^5.2.0", "ds-test": "https://github.com/dapphub/ds-test", "forge-std": "https://github.com/foundry-rs/forge-std", "tsx": "^4.19.3" } }, "sha512-N2majtkb0akE/lyU84ySi6kWa5O7VA6ZBkYWSWoTDHInv6PgzxTHzeH41th1hipezZdTc+9/A29Hf94FN0fX4g=="],
 

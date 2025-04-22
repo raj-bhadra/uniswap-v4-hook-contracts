@@ -21,6 +21,6 @@
   },
   "overrides": {
     "@inco/lightning": "0.1.21",
-    "@inco/js": "0.1.14"
+    "@inco/js": "0.1.20"
   }
 }

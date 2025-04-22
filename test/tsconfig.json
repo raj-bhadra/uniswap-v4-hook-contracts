@@ -3,15 +3,12 @@
     // Environment setup & latest features
     "lib": ["ESNext", "DOM"],
     "target": "ESNext",
-    "module": "ESNext",
-    "moduleDetection": "force",
-    "jsx": "react-jsx",
+    "module": "Node16",
+    "moduleResolution": "node16",
     "allowJs": true,
 
     // Bundler mode
-    "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
-    "verbatimModuleSyntax": true,
     "noEmit": true,
 
     // Best practices

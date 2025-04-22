@@ -10,4 +10,12 @@ include .env
 
 .PHONY up:
 up:
-	docker compose up
+	docker compose up --detach
+
+.PHONY: down
+down:
+	docker compose down
+
+.PHONY: test
+test: up
+	bun run vitest test/src/incolite.local.e2e.test.ts
