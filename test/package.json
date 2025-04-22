@@ -1,0 +1,15 @@
+{
+  "name": "@inco/lightning-rod-test",
+  "license": "Apache-2.0",
+  "scripts": {
+    "test:e2e": "bun vitest run",
+    "test:tsc": "tsc --noEmit",
+    "generate:abis": "wagmi generate"
+  },
+  "dependencies": {
+    "@inco/js": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "^3.1.2"
+  }
+}

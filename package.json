@@ -1,0 +1,26 @@
+{
+  "name": "@inco/lightning-rod",
+  "module": "index.ts",
+  "type": "module",
+  "license": "Apache-2.0",
+  "workspaces": [
+    "test"
+  ],
+  "scripts": {
+    "lint": "bun prettier --check .",
+    "lint:fix": "bun prettier --write ."
+  },
+  "devDependencies": {
+    "@inco/lightning": "workspace:*",
+    "@types/bun": "latest",
+    "prettier": "^3.4.2",
+    "prettier-plugin-organize-imports": "^4.1.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "overrides": {
+    "@inco/lightning": "0.1.21",
+    "@inco/js": "0.1.14"
+  }
+}
