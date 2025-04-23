@@ -15,11 +15,11 @@
   "devDependencies": {
     "@inco/lightning": "workspace:*",
     "@types/bun": "latest",
-    "prettier": "^3.4.2",
+    "prettier": "^3.5.3",
     "prettier-plugin-organize-imports": "^4.1.0"
   },
   "peerDependencies": {
-    "typescript": "^5"
+    "typescript": "^5.8.3"
   },
   "overrides": {
     "@inco/lightning": "0.1.21",

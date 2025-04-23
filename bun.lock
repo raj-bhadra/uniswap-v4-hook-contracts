@@ -6,17 +6,18 @@
       "devDependencies": {
         "@inco/lightning": "workspace:*",
         "@types/bun": "latest",
-        "prettier": "^3.4.2",
+        "prettier": "^3.5.3",
         "prettier-plugin-organize-imports": "^4.1.0",
       },
       "peerDependencies": {
-        "typescript": "^5",
+        "typescript": "^5.8.3",
       },
     },
     "contracts": {
       "name": "lightning-rod-contracts",
       "dependencies": {
         "@inco/lightning": "^0.1.21",
+        "@inco/shared": "^0.1.0",
         "@openzeppelin/contracts": "^5.3.0",
         "ds-test": "https://github.com/dapphub/ds-test",
         "forge-std": "https://github.com/foundry-rs/forge-std",
@@ -130,6 +131,8 @@
     "@inco/lightning": ["@inco/lightning@0.1.21", "", { "dependencies": { "@openzeppelin/contracts": "^5.2.0", "@openzeppelin/contracts-upgradeable": "^5.2.0", "ds-test": "https://github.com/dapphub/ds-test", "forge-std": "https://github.com/foundry-rs/forge-std", "tsx": "^4.19.3" } }, "sha512-N2majtkb0akE/lyU84ySi6kWa5O7VA6ZBkYWSWoTDHInv6PgzxTHzeH41th1hipezZdTc+9/A29Hf94FN0fX4g=="],
 
     "@inco/lightning-rod-test": ["@inco/lightning-rod-test@workspace:test"],
+
+    "@inco/shared": ["@inco/shared@0.1.0", "", { "dependencies": { "@openzeppelin/contracts": "^5.2.0", "ds-test": "https://github.com/dapphub/ds-test", "forge-std": "https://github.com/foundry-rs/forge-std" } }, "sha512-Yw4KnTCGJPMGlWFq1JEpuadoNYFEXA+TObwNsR2Tq9ICgf0iVksSYatqiUeHaB1/J9Vyo5obZOKsU92Oieacog=="],
 
     "@jridgewell/sourcemap-codec": ["@jridgewell/sourcemap-codec@1.5.0", "", {}, "sha512-gv3ZRaISU3fjPAgNsriBRqGWQL6quFx04YMPW/zD8XMLsU32mhCCbfbO6KZFLjvYpCZ8zyDEgqsgf+PwPaM7GQ=="],
 
