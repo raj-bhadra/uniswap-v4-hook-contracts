@@ -9,6 +9,8 @@ contract SimpleConfidentialToken {
     using e for euint256;
     using e for ebool;
     using e for uint256;
+    using e for bytes;
+    using e for address;
 
     // since balances are represented by handles, just calling balanceOf() without having the decryption access
     // on the corresponding handle won't allow to know the actual balance
