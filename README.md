@@ -13,12 +13,20 @@ We require recent versions of
 
 to be installed.
 
+## Build
+
+Build the components with:
+
+```bash
+bun install
+```
+
 ## Local test network
 
 To run a local test network, you need to have Docker installed. You can use the following command to start the network:
 
 ```bash
-docker-compose up
+docker compose up
 ```
 
 ## Running simple end-to-end test
