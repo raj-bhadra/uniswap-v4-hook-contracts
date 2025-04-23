@@ -24,10 +24,7 @@ services:
   # Covalidator service that waits for deployer to be healthy
   covalidator:
     platform: linux/amd64 # mac compatibility
-#    image: inconetwork/covalidator:v3-32-g57c0c16
-    build:
-      context: ../inco-monorepo
-      dockerfile: covalidator/Dockerfile
+    image: inconetwork/covalidator:v3-33-ga70a49f
     container_name: covalidator
     depends_on:
       anvil:

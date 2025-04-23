@@ -12,7 +12,7 @@ describe(`Lightning Local Node E2E`, { timeout: 50_000 }, async () => {
     throw new Error("DUMP_ENV_FILE doesn't exist!");
   }
   const buf = await readFileFromRoot(dumpParams);
-  const { SENDER_PRIVATE_KEY, ADD_TWO_ADDRESS, ECIES_PUBLIC_KEY, EXECUTOR_ADDRESS } = parseLocalEnv(buf);
+  const { SENDER_PRIVATE_KEY, ECIES_PUBLIC_KEY, EXECUTOR_ADDRESS } = parseLocalEnv(buf);
   const zap = Lightning.custom({
     executorAddress: EXECUTOR_ADDRESS,
     eciesPublicKey: ECIES_PUBLIC_KEY,

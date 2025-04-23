@@ -3,15 +3,13 @@ import { Lightning } from '@inco/js/lite';
 import { baseSepolia } from 'viem/chains';
 import { describe } from 'vitest';
 import { runE2ETest } from './lightning-test';
-import { loadDotEnv, readFileFromRoot } from './repo.ts';
+import { loadDotEnv } from './repo.ts';
 
 describe(`Lightning Base Sepolia E2E`, { timeout: 50_000 }, async () => {
   loadDotEnv();
   loadDotEnv('secrets.env');
-  const dumpParams = getEnv('DUMP_ENV_FILE');
   const senderPrivKey = parse(HexString, getEnv('SENDER_PRIVATE_KEY'));
   const hostChainRpcUrl = getEnv('BASE_SEPOLIA_RPC_URL');
-  const buf = await readFileFromRoot(dumpParams);
   const chain = baseSepolia;
   const zap = Lightning.latest('testnet', chain.id);
   runE2ETest(Math.floor(Math.random() * 100), zap, {

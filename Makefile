@@ -33,3 +33,9 @@ test_base_sepolia:
 .PHONY: update_dump
 update_dump:
 	sed -i '/^DUMP_ENV_FILE=/c\DUMP_ENV_FILE=$(DUMPS_DIR)/$(shell ls $(DUMPS_DIR) | tail -1)' .env
+
+.PHONY: test_ci
+test_ci:
+	bun install
+	$(MAKE) test
+	docker compose down

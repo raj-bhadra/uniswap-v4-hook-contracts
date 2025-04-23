@@ -9,7 +9,7 @@ export default defineConfig([
     plugins: [
       foundry({
         project: "../contracts/",
-        exclude: commonExcludes,
+        include: ["AddTwo.sol/**"],
       }),
     ],
   },
