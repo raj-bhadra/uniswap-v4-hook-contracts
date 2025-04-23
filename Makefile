@@ -6,10 +6,14 @@ SHELL := bash
 MAKEFLAGS += --warn-undefined-variables
 MAKEFLAGS += --no-builtin-rules
 
-include .env
+DUMPS_DIR=node_modules/@inco/lightning/dumps
+
+.PHONY: compile_solidity
+compile_solidity:
+	cd contracts && forge compile
 
 .PHONY up:
-up:
+up: compile_solidity
 	docker compose up --detach
 
 .PHONY: down
@@ -18,4 +22,14 @@ down:
 
 .PHONY: test
 test: up
-	bun run vitest test/src/incolite.local.e2e.test.ts
+	bun run vitest run test/src/lightning.local.e2e.test.ts
+
+# This requires
+.PHONY: test_base_sepolia
+test_base_sepolia:
+	bun run vitest run test/src/lightning.base-sepolia.e2e.test.ts
+
+# Updates the DUMP_ENV_FILE in .env to a most recent dump
+.PHONY: update_dump
+update_dump:
+	sed -i '/^DUMP_ENV_FILE=/c\DUMP_ENV_FILE=$(DUMPS_DIR)/$(shell ls $(DUMPS_DIR) | tail -1)' .env
