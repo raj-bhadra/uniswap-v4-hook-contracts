@@ -23,6 +23,7 @@ docker-compose up
 
 ## Running simple end-to-end test
 
+This test makes sure your local inco environment works properly.  
 You can run the [`incolite.local.e2e.test.ts`](./test/src/incolite.local.e2e.test.ts) and automatically boot the local test network with:
 
 ```
@@ -48,3 +49,14 @@ cd test && bun run test:e2e
 ```
 
 In another terminal.
+
+## Testing a Confidential Smart Contract
+
+An example of a simple confidential token using inco is provided in `contracts/`.  
+To test run:
+
+```bash
+bun i
+cd contracts
+forge test
+```
