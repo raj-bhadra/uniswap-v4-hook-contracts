@@ -1,42 +1,17 @@
-# These dumps are created by `make dump_deployment_state` in ./contracts/lightning-deployment
-x-env-file: &env_file
-  env_file: ${DUMP_ENV_FILE}
-
 services:
   # Anvil node
   anvil:
     platform: linux/amd64 # mac compatibility
-    image: ghcr.io/foundry-rs/foundry:v0.3.0
+    image: inconetwork/local-node-anvil:${DOCKER_IMAGE_TAG}
     ports:
       - "8545:8545"
-    volumes:
-      - ./node_modules/@inco/lightning/dumps:/dumps
-    entrypoint: ["sh", "-c"]
-    <<: *env_file
-    command: ["anvil --host 0.0.0.0 --port 8545 --load-state /dumps/$${STATE_DUMP}"]
-    healthcheck:
-      test: ["CMD", "cast", "rpc", "eth_blockNumber"]
-      interval: 5s
-      retries: 5
-      start_period: 1s
-      timeout: 3s
 
   # Covalidator service that waits for deployer to be healthy
   covalidator:
     platform: linux/amd64 # mac compatibility
-    image: inconetwork/covalidator:v3-33-ga70a49f
-    container_name: covalidator
+    image: inconetwork/local-node-covalidator:${DOCKER_IMAGE_TAG}
     depends_on:
       anvil:
         condition: service_healthy
-    <<: *env_file
-    environment:
-      COVALIDATOR_HOST_CHAIN_RPC_URL: http://anvil:8545
-      COVALIDATOR_HOST_CHAIN_ID: 31337
-      COVALIDATOR_L1_ENABLED: false
-      COVALIDATOR_INCO_EXECUTOR_TYPE: IncoLightning
-      COVALIDATOR_EXPOSE_KMS_SERVICE: true
-      COVALIDATOR_GRPC_SERVER_ADDRESS: 0.0.0.0:50055
     ports:
       - "50055:50055"
-    command: ["/app/covalidator", "start", "--home=/root", "--keyring-backend=test", "--grpc-insecure"]

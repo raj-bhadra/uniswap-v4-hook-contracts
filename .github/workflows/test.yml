@@ -22,4 +22,5 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
 
-      - run: make test_ci
+      - run: bun install
+      - run: bun run test
