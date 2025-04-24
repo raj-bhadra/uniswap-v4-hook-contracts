@@ -1,11 +1,11 @@
-import {readFile} from "fs/promises";
-import * as path from "path";
-import * as dotenv from "dotenv";
+import * as dotenv from 'dotenv';
+import { readFile } from 'fs/promises';
+import * as path from 'path';
 
 const root = path.resolve(__dirname, '..', '..');
-const envPath = path.join(root, "/.env");
 
-export function loadDotenv() {
+export function loadDotEnv(envFile = '.env') {
+  const envPath = path.join(root, envFile);
   dotenv.config({ path: envPath });
 }
 

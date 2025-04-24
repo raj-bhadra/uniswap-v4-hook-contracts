@@ -10,6 +10,7 @@ We require recent versions of
 
 - [Docker](https://www.docker.com/)
 - [Bun](https://bun.sh/)
+- [Foundry](https://getfoundry.sh/)
 
 to be installed.
 
