@@ -4,7 +4,13 @@ Lightning Rod is the home of the Dapp Developer Kit (DDK) for Inco Lightning net
 
 <img src="./docs/images/lightning-rod.png" alt="Lightning Rod" width="300" style="float: right; margin-left: 20px; margin-bottom: 20px;">
 
-## Prerequisites
+## Documentation
+
+
+
+## Quick Start
+
+### Prerequisites
 
 We require recent versions of
 
@@ -14,7 +20,15 @@ We require recent versions of
 
 to be installed.
 
-## Build
+### Install dependencies
+
+To install the depednencies, run:
+
+```bash
+bun install
+```
+
+### Build
 
 Build the components with:
 
@@ -22,7 +36,7 @@ Build the components with:
 bun install
 ```
 
-## Local test network
+### Local test network
 
 To run a local test network, you need to have Docker installed. You can use the following command to start the network:
 
@@ -30,20 +44,16 @@ To run a local test network, you need to have Docker installed. You can use the 
 docker compose up
 ```
 
-## Running simple end-to-end test
+### Running simple end-to-end test
 
 This test makes sure your local inco environment works properly.  
 You can run the [`incolite.local.e2e.test.ts`](./test/src/incolite.local.e2e.test.ts) and automatically boot the local test network with:
 
 ```
-make test
+bun test:e2e
 ```
 
-This runs the docker compose setup forked in the background, you can stop it with
-
-```
-make down
-```
+This compiles some contracts with Foundry and run a local Inco Lightning environment in the background.
 
 Or if you prefer to watch things in a terminal, first run:
 
@@ -59,13 +69,13 @@ cd test && bun run test:e2e
 
 In another terminal.
 
-## Testing a Confidential Smart Contract
+### Testing a Confidential Smart Contract
 
 An example of a simple confidential token using inco is provided in `contracts/`.  
 To test run:
 
 ```bash
-bun i
+bun install
 cd contracts
 forge test
 ```
