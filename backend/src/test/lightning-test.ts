@@ -16,8 +16,8 @@ import {
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { beforeAll, describe, expect, it } from 'vitest';
-import addTwoBuild from '../../contracts/out/AddTwo.sol/AddTwo.json';
-import { addTwoAbi } from './generated/abis';
+import addTwoBuild from '../../../contracts/out/AddTwo.sol/AddTwo.json';
+import { addTwoAbi } from '../generated/abis';
 
 // E2EConfig contains all configuration needed to run a test against
 // a specific deployment.

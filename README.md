@@ -4,9 +4,13 @@ Lightning Rod is the home of the Dapp Developer Kit (DDK) for Inco Lightning net
 
 <img src="./docs/images/lightning-rod.png" alt="Lightning Rod" width="300" style="float: right; margin-left: 20px; margin-bottom: 20px;">
 
+To start working with Inco Lightning and the Lighting Rod template repository, work through the [Quick Start](#quick-start) section below.
+
+Further [documentation](#documentation) is linked below.
+
 ## Documentation
 
-
+- [Inco Lightning SDK](docs/inco-lightning.md)
 
 ## Quick Start
 

@@ -5,12 +5,12 @@
   "type": "module",
   "module": "index.ts",
   "workspaces": [
-    "test",
+    "backend",
     "contracts"
   ],
   "scripts": {
     "test:setup": "docker compose up --detach && pushd contracts && forge compile && popd",
-    "test:e2e": "pushd test && bun test:e2e && popd",
+    "test:e2e": "pushd backend && bun test:e2e && popd",
     "test": "bun test:setup && bun test:e2e",
     "lint": "bun prettier --check .",
     "lint:fix": "bun prettier --write ."
@@ -26,6 +26,6 @@
   },
   "overrides": {
     "@inco/lightning": "0.1.30",
-    "@inco/js": "0.1.31-alpha.1"
+    "@inco/js": "0.1.32"
   }
 }

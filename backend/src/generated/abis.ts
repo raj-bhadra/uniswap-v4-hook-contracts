@@ -46,3 +46,38 @@ export const addTwoAbi = [
     stateMutability: 'view',
   },
 ] as const
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// SimpleConfidentialToken
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+export const simpleConfidentialTokenAbi = [
+  { type: 'constructor', inputs: [], stateMutability: 'nonpayable' },
+  {
+    type: 'function',
+    inputs: [{ name: '', internalType: 'address', type: 'address' }],
+    name: 'balanceOf',
+    outputs: [{ name: '', internalType: 'euint256', type: 'bytes32' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'to', internalType: 'address', type: 'address' },
+      { name: 'valueInput', internalType: 'bytes', type: 'bytes' },
+    ],
+    name: 'transfer',
+    outputs: [{ name: '', internalType: 'ebool', type: 'bytes32' }],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'to', internalType: 'address', type: 'address' },
+      { name: 'value', internalType: 'euint256', type: 'bytes32' },
+    ],
+    name: 'transfer',
+    outputs: [{ name: 'success', internalType: 'ebool', type: 'bytes32' }],
+    stateMutability: 'nonpayable',
+  },
+] as const
