@@ -70,5 +70,7 @@ contract SimpleConfidentialToken {
         // allow this contract to be able to compute over the new balances in future transfers
         senderNewBalance.allowThis();
         receiverNewBalance.allowThis();
+        // let the caller know if the transfer was successful
+        success.allow(msg.sender);
     }
 }
