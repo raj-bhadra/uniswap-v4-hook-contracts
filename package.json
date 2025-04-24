@@ -9,6 +9,9 @@
     "contracts"
   ],
   "scripts": {
+    "test:setup": "docker compose up --detach && pushd contracts && forge compile && popd",
+    "test:e2e": "pushd test && bun test:e2e && popd",
+    "test": "bun test:setup && bun test:e2e",
     "lint": "bun prettier --check .",
     "lint:fix": "bun prettier --write ."
   },
@@ -23,6 +26,6 @@
   },
   "overrides": {
     "@inco/lightning": "0.1.30",
-    "@inco/js": "0.1.28"
+    "@inco/js": "0.1.31"
   }
 }
