@@ -1,7 +1,6 @@
 import { defineConfig } from "@wagmi/cli";
 import { foundry } from "@wagmi/cli/plugins";
 
-const commonExcludes = ["Strings.sol/**", "Vm.sol/**", "ECDSA.sol/**", "ShortStrings.sol/**"];
 
 export default defineConfig([
   {
@@ -9,7 +8,7 @@ export default defineConfig([
     plugins: [
       foundry({
         project: "../contracts/",
-        include: ["AddTwo.sol/**"],
+        include: ["AddTwo.sol/**", "SimpleConfidentialToken.sol/**"],
       }),
     ],
   },
