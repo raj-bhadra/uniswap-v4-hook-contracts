@@ -32,14 +32,6 @@ To install the depednencies, run:
 bun install
 ```
 
-### Build
-
-Build the components with:
-
-```bash
-bun install
-```
-
 ### Local test network
 
 To run a local test network, you need to have Docker installed. You can use the following command to start the network:
@@ -48,30 +40,25 @@ To run a local test network, you need to have Docker installed. You can use the 
 docker compose up
 ```
 
+This is useful to deploy your dapp locally and test it in a simulated environment.
+
 ### Running simple end-to-end test
 
 This test makes sure your local inco environment works properly.  
 You can run the [`incolite.local.e2e.test.ts`](./test/src/incolite.local.e2e.test.ts) and automatically boot the local test network with:
 
-```
+```bash
+# no need to have docker compose running prior to this command. Have the docker daemon up.
 bun test:e2e
 ```
 
-This compiles some contracts with Foundry and run a local Inco Lightning environment in the background.
+This compiles some contracts with Foundry and run a local Inco Lightning environment (runs the docker compose) in the background.
 
-Or if you prefer to watch things in a terminal, first run:
+If you have the docker compose already running in the background, you can run the test like so:
 
+```bash
+cd backend && bun run test:e2e
 ```
-docker compose up
-```
-
-in one terminal, and:
-
-```
-cd test && bun run test:e2e
-```
-
-In another terminal.
 
 ### Testing a Confidential Smart Contract
 
