@@ -16,16 +16,23 @@ import {LiquidityAmounts} from "@uniswap/v4-core/test/utils/LiquidityAmounts.sol
 import {IPositionManager} from "@uniswap/v4-periphery/src/interfaces/IPositionManager.sol";
 import {Constants} from "@uniswap/v4-core/test/utils/Constants.sol";
 
+import {IncoTest} from "@inco/lightning/src/test/IncoTest.sol";
+import {GWEI} from "@inco/shared/src/TypeUtils.sol";
+
 import {EasyPosm} from "./utils/libraries/EasyPosm.sol";
 import {Deployers} from "./utils/Deployers.sol";
 
 import {Counter} from "../Counter.sol";
+import {console2} from "forge-std/console2.sol";
+import {euint256, e} from "@inco/lightning/src/Lib.sol";
 
-contract CounterTest is Test, Deployers {
+contract CounterTest is IncoTest, Deployers {
     using EasyPosm for IPositionManager;
     using PoolIdLibrary for PoolKey;
     using CurrencyLibrary for Currency;
     using StateLibrary for IPoolManager;
+    using e for uint256;
+    using e for euint256;
 
     Currency currency0;
     Currency currency1;
@@ -39,7 +46,8 @@ contract CounterTest is Test, Deployers {
     int24 tickLower;
     int24 tickUpper;
 
-    function setUp() public {
+    function setUp() public override {
+        super.setUp();
         // Deploys all required artifacts.
         deployArtifacts();
 
@@ -135,5 +143,20 @@ contract CounterTest is Test, Deployers {
 
         assertEq(hook.beforeAddLiquidityCount(poolId), 1);
         assertEq(hook.beforeRemoveLiquidityCount(poolId), 1);
+    }
+
+    function testEncryptedNumberValue() public {
+        euint256 initialValue = uint256(100).asEuint256();
+        initialValue.allow(address(hook));
+        initialValue.allow(address(this));
+        hook.setEncryptedNumberValue(initialValue);
+        assertNotEq(hook.getDecryptedNumberValue(), 100);
+        euint256 valueToAdd = uint256(200).asEuint256();
+        valueToAdd.allow(address(hook));
+        valueToAdd.allow(address(this));
+        hook.addToEncryptedNumbervalue(valueToAdd);
+        hook.requestDecryption();
+        processAllOperations();
+        assertEq(hook.getDecryptedNumberValue(), 300);
     }
 }

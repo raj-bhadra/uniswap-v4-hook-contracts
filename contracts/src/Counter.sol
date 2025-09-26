@@ -9,9 +9,15 @@ import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/src/types/PoolId.sol";
 import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
 import {BeforeSwapDelta, BeforeSwapDeltaLibrary} from "@uniswap/v4-core/src/types/BeforeSwapDelta.sol";
+import {euint256, ebool, e} from "@inco/lightning/src/Lib.sol";
 
 contract Counter is BaseHook {
     using PoolIdLibrary for PoolKey;
+    using e for euint256;
+    using e for ebool;
+    using e for uint256;
+    using e for bytes;
+    using e for address;
 
     // NOTE: ---------------------------------------------------------
     // state variables should typically be unique to a pool
@@ -23,6 +29,9 @@ contract Counter is BaseHook {
 
     mapping(PoolId => uint256 count) public beforeAddLiquidityCount;
     mapping(PoolId => uint256 count) public beforeRemoveLiquidityCount;
+
+    euint256 public encryptedNumberValue;
+    uint256 public decryptedNumberValue;
 
     constructor(IPoolManager _poolManager) BaseHook(_poolManager) {}
 
@@ -89,5 +98,30 @@ contract Counter is BaseHook {
     ) internal override returns (bytes4) {
         beforeRemoveLiquidityCount[key.toId()]++;
         return BaseHook.beforeRemoveLiquidity.selector;
+    }
+
+    function setEncryptedNumberValue(euint256 value) external {
+        encryptedNumberValue = value.add(0);
+        encryptedNumberValue.allow(address(this));
+        encryptedNumberValue.allow(msg.sender);
+    }
+
+    function addToEncryptedNumbervalue(euint256 valueToAdd) external {
+        encryptedNumberValue = encryptedNumberValue.add(valueToAdd);
+        encryptedNumberValue.allow(address(this));
+        encryptedNumberValue.allow(msg.sender);
+    }
+
+    function requestDecryption() public returns (uint256) {
+        uint256 requestId = encryptedNumberValue.requestDecryption(this.onDecryptionCallback.selector, "");
+        return requestId;
+    }
+
+    function onDecryptionCallback(uint256, bytes32 _decryptedAmount, bytes memory) public {
+        decryptedNumberValue = uint256(_decryptedAmount);
+    }
+
+    function getDecryptedNumberValue() external view returns (uint256) {
+        return decryptedNumberValue;
     }
 }
