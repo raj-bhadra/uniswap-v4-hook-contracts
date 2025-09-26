@@ -1,4 +1,6 @@
-# Lightning Rod
+# Juni
+
+Contracts For Uniswap V4 Hook With FHE Based Encrypted Orders To Protect LPs & Traders. Forked from Inco-fhevm lightning rod project.
 
 Lightning Rod is the home of the Dapp Developer Kit (DDK) for Inco Lightning network.
 
