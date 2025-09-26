@@ -14,8 +14,11 @@ import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/src/types/PoolId.sol";
 import {ebool, e, euint256} from "@inco/lightning/src/Lib.sol";
+import {IHook} from "./IHook.sol";
+import {Blocks} from "./Blocks.sol";
+import {ESwapInputParams} from "./ESwapParams.sol";
 
-contract Juni is BaseHook {
+contract Juni is BaseHook, Blocks, IHook {
     using PoolIdLibrary for PoolKey;
     using CurrencySettler for Currency;
     using e for euint256;
@@ -101,4 +104,10 @@ contract Juni is BaseHook {
                 afterRemoveLiquidityReturnDelta: false
             });
     }
+
+    function transferDisabled(address user) external view returns (bool) {
+        return false;
+    }
+
+    function transferToConfidentialERC20Wrapper(address from, uint256 amount) external {}
 }
