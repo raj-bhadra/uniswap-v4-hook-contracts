@@ -59,7 +59,7 @@ contract Juni is BaseHook {
         return (this.afterSwap.selector, 0);
     }
 
-    function addESwap() public returns (bool) {
+    function addESwap(ESwapInputParams calldata params) public returns (bool) {
         // todo: create a function to add an encrypted swap
         return true;
     }
