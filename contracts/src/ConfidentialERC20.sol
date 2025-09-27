@@ -16,6 +16,7 @@ contract ConfidentialERC20 is Ownable {
     string public _name;
     string public _symbol;
     uint8 public constant decimals = 18;
+    uint256 public decryptedBalance;
 
     // Encrypted state
     mapping(address => euint256) internal balances;
@@ -144,5 +145,18 @@ contract ConfidentialERC20 is Ownable {
         e.allow(newBalanceFrom, from);
 
         emit Transfer(from, to);
+    }
+
+    function decryptBalance(address user) public returns (uint256) {
+        e.allow(balances[user], address(this));
+        e.requestDecryption(balances[user], this.onDecryptionCallback.selector, "");
+    }
+
+    function onDecryptionCallback(uint256, bytes32 _decryptedBalance, bytes memory) public {
+        decryptedBalance = uint256(_decryptedBalance);
+    }
+
+    function setDecryptedBalance(uint256 _decryptedBalance) public onlyOwner {
+        decryptedBalance = _decryptedBalance;
     }
 }

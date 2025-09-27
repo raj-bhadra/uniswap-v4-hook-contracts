@@ -244,10 +244,13 @@ contract JuniTest is IncoTest, Deployers {
         hook.requestDecryptionForEarliestEncryptedBlock();
         processAllOperations();
         hook.runESwaps();
+        // confidentialERC20Wrapper0.decryptBalance(address(this));
+        // processAllOperations();
         assertEq(
             IERC20(address(uint160(currency0.toId()))).balanceOf(address(confidentialERC20Wrapper0)),
             99999999999990000
         );
+        assertEq(confidentialERC20Wrapper0.decryptBalance(address(this)), 0);
     }
 
     function testJuniHooks() public {
