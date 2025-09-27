@@ -1,28 +1,27 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {console2} from "forge-std/console2.sol";
 import {BaseHook} from "@openzeppelin/uniswap-hooks/src/base/BaseHook.sol";
 import {IPoolManager, SwapParams} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
+import {SafeCast} from "@uniswap/v4-core/src/libraries/SafeCast.sol";
 import {CurrencySettler} from "@openzeppelin/uniswap-hooks/src/utils/CurrencySettler.sol";
 import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {BeforeSwapDelta, BeforeSwapDeltaLibrary, toBeforeSwapDelta} from "@uniswap/v4-core/src/types/BeforeSwapDelta.sol";
+import {ebool, e, euint256} from "@inco/lightning/src/Lib.sol";
+import {ESwapParams, ESwapInputParams} from "./ESwapParams.sol";
 import {IUniswapV4Router04} from "hookmate/interfaces/router/IUniswapV4Router04.sol";
 import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
+import {console2} from "forge-std/console2.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/src/types/PoolId.sol";
-import {ebool, e, euint256} from "@inco/lightning/src/Lib.sol";
-import {IHook} from "./IHook.sol";
+import {DecryptionParams} from "./DecryptionParams.sol";
 import {Blocks} from "./Blocks.sol";
-import {ESwapInputParams, ESwapParams} from "./ESwapParams.sol";
+import {IHook} from "./IHook.sol";
 import {ConfidentialERC20Wrapper} from "./ConfidentialERC20Wrapper.sol";
 import {LPRewardVault} from "./LPRewardVault.sol";
-import {DecryptionParams} from "./DecryptionParams.sol";
 
 contract Juni is BaseHook, Blocks, IHook {
-    using PoolIdLibrary for PoolKey;
     using CurrencySettler for Currency;
     using e for euint256;
     using e for ebool;
@@ -57,7 +56,28 @@ contract Juni is BaseHook, Blocks, IHook {
     ConfidentialERC20Wrapper public confidentialERC20Wrapper1;
     LPRewardVault public lpRewardVault;
 
-    constructor(IPoolManager _poolManager) BaseHook(_poolManager) {}
+    struct ESwapRunInfo {
+        uint256 amountIn;
+        uint256 amountInMin;
+        bool zeroForOne;
+        bool hasEnoughBalance;
+        uint256 arbAuctionFee;
+        bool isWinner;
+        uint256 txIndex;
+    }
+
+    constructor(
+        IPoolManager _poolManager,
+        IUniswapV4Router04 _swapRouter,
+        ConfidentialERC20Wrapper _confidentialERC20Wrapper0,
+        ConfidentialERC20Wrapper _confidentialERC20Wrapper1,
+        LPRewardVault _lpRewardVault
+    ) BaseHook(_poolManager) {
+        swapRouter = _swapRouter;
+        confidentialERC20Wrapper0 = _confidentialERC20Wrapper0;
+        confidentialERC20Wrapper1 = _confidentialERC20Wrapper1;
+        lpRewardVault = _lpRewardVault;
+    }
 
     function _beforeInitialize(address, PoolKey calldata _poolKey, uint160) internal override returns (bytes4) {
         // require that pool key should not be already set
@@ -73,18 +93,52 @@ contract Juni is BaseHook, Blocks, IHook {
         SwapParams calldata params,
         bytes calldata
     ) internal override returns (bytes4, BeforeSwapDelta, uint24) {
-        console2.log("before swap called");
+        require(locked, "locked");
+        require(params.amountSpecified < 0, "amountSpecified must be negative as hook only supports exact input swaps");
+        Currency specified = params.zeroForOne ? key.currency0 : key.currency1;
+        uint256 specifiedAmount = uint256(-params.amountSpecified);
+        if (params.zeroForOne) {
+            console2.log("extracting base token to hook for token0 ", specifiedAmount);
+            confidentialERC20Wrapper0.extractBaseTokenToHook(specifiedAmount);
+            console2.log("extracted base token to hook for token0 ", specifiedAmount);
+        } else {
+            console2.log("extracting base token to hook for token1 ", specifiedAmount);
+            confidentialERC20Wrapper1.extractBaseTokenToHook(specifiedAmount);
+            console2.log("extracted base token to hook for token1 ", specifiedAmount);
+        }
+        IERC20(address(uint160(specified.toId()))).approve(address(swapRouter), specifiedAmount);
         return (this.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, 0);
     }
 
     function _afterSwap(
         address,
         PoolKey calldata,
-        SwapParams calldata,
+        SwapParams calldata params,
         BalanceDelta,
-        bytes calldata
+        bytes calldata hookData
     ) internal override returns (bytes4, int128) {
-        console2.log("after swap called");
+        console2.log("afterSwap");
+        ESwapRunInfo memory eSwapRunInfo = abi.decode(hookData, (ESwapRunInfo));
+        if (eSwapRunInfo.isWinner) {
+            console2.log("winner tx");
+            console2.log("txIndex", eSwapRunInfo.txIndex);
+            console2.log("arbAuctionFee", eSwapRunInfo.arbAuctionFee);
+            if (params.zeroForOne) {
+                console2.log("Paying Arb Auction Fee in token0", eSwapRunInfo.arbAuctionFee);
+                confidentialERC20Wrapper0.extractBaseTokenToHook(eSwapRunInfo.arbAuctionFee);
+                IERC20(confidentialERC20Wrapper0.baseERC20()).transfer(
+                    address(lpRewardVault),
+                    eSwapRunInfo.arbAuctionFee
+                );
+            } else {
+                console2.log("Paying Arb Auction Fee in token1", eSwapRunInfo.arbAuctionFee);
+                confidentialERC20Wrapper1.extractBaseTokenToHook(eSwapRunInfo.arbAuctionFee);
+                IERC20(confidentialERC20Wrapper1.baseERC20()).transfer(
+                    address(lpRewardVault),
+                    eSwapRunInfo.arbAuctionFee
+                );
+            }
+        }
         return (this.afterSwap.selector, 0);
     }
 
@@ -99,6 +153,20 @@ contract Juni is BaseHook, Blocks, IHook {
         amountIn = eAmountInTransform.eq(4).select(amountIn.div(uint256(100000).asEuint256()), amountIn);
         amountIn.allow(address(this));
         return amountIn;
+    }
+
+    function transformAmountInDecrypted(uint256 amountIn, uint256 amountInTransform) internal pure returns (uint256) {
+        if (amountInTransform == uint256(1)) {
+            return amountIn * uint256(100);
+        } else if (amountInTransform == uint256(2)) {
+            return amountIn * uint256(100000);
+        } else if (amountInTransform == uint256(3)) {
+            return amountIn / uint256(100);
+        } else if (amountInTransform == uint256(4)) {
+            return amountIn / (uint256(100000));
+        } else {
+            return amountIn;
+        }
     }
 
     function addESwap(ESwapInputParams calldata params) public returns (bool) {
@@ -193,6 +261,15 @@ contract Juni is BaseHook, Blocks, IHook {
         return true;
     }
 
+    function requestDecryptionForEarliestEncryptedBlock() public returns (bool) {
+        // if length is zero, do nothing and return true
+        if (lengthEncryptedBlocks() == 0) {
+            return true;
+        }
+        uint256 earliestEncryptedBlock = peekEncryptedBlocks();
+        return requestDecryptionForBlock(earliestEncryptedBlock);
+    }
+
     function requestDecryptionForBlock(uint256 blockNumber) public returns (bool) {
         // this block should be the first block in the encrypted orders queue
         require(peekEncryptedBlocks() == blockNumber, "Block not first in encrypted orders queue");
@@ -255,13 +332,111 @@ contract Juni is BaseHook, Blocks, IHook {
         pushDecryptedBlock(decryptionParams.blockNumber);
     }
 
+    function getESwapRunInfo(uint256 decryptedBlock, uint256 i) internal view returns (ESwapRunInfo memory) {
+        uint256 decryptedBlockState = blockDecryptedState[decryptedBlock];
+        uint256 length = queuedSwapsForBlock[decryptedBlock].length;
+        uint256 amountIn = queuedSwapsForBlock[decryptedBlock][i].amountIn;
+        uint256 amountInTransform = (blockAmountInTransformDecrypted[decryptedBlock] >> ((length - 1 - i) * 5)) & 0x1F;
+        console2.log("amountInTransform ", amountInTransform);
+        return
+            ESwapRunInfo({
+                amountIn: transformAmountInDecrypted(amountIn, amountInTransform),
+                amountInMin: 0,
+                zeroForOne: getNthBit(decryptedBlockState, (length * 2 - 1) - (i * 2)) == 0,
+                hasEnoughBalance: getNthBit(decryptedBlockState, (length * 2 - 1) - (i * 2 + 1)) == 0,
+                arbAuctionFee: i == blockArbAuctionWinnerDecryptedTxIndex[decryptedBlock]
+                    ? blockArbAuctionWinnerDecryptedTxAmount[decryptedBlock]
+                    : 0,
+                isWinner: i == blockArbAuctionWinnerDecryptedTxIndex[decryptedBlock],
+                txIndex: i
+            });
+    }
+
     function runESwap(uint256 decryptedBlock, uint256 i) public returns (bool) {
-        // todo: create a function to run a single encrypted block
+        ESwapParams memory eSwapParams = queuedSwapsForBlock[decryptedBlock][i];
+        ESwapRunInfo memory eSwapRunInfo = getESwapRunInfo(decryptedBlock, i);
+        console2.log("=================");
+        console2.log("For swap number ", i);
+        console2.log("zeroForOne", eSwapRunInfo.zeroForOne);
+        console2.log("hasEnoughBalance", eSwapRunInfo.hasEnoughBalance);
+        activeSwaps[eSwapParams.creator]--;
+        if (!eSwapRunInfo.hasEnoughBalance) {
+            console2.log("swap not executed because creator does not have enough balance for amount in");
+            return false;
+        }
+        try
+            swapRouter.swapExactTokensForTokens({
+                amountIn: eSwapRunInfo.amountIn,
+                amountOutMin: eSwapRunInfo.amountInMin,
+                zeroForOne: eSwapRunInfo.zeroForOne,
+                poolKey: poolKey,
+                hookData: abi.encode(eSwapRunInfo),
+                receiver: address(this),
+                deadline: eSwapParams.deadline
+            })
+        returns (BalanceDelta delta) {
+            if (eSwapRunInfo.zeroForOne) {
+                console2.log("wrapping amount1 to receiver ", uint256(uint128(delta.amount1())));
+                confidentialERC20Wrapper1.wrapFromHook(eSwapParams.receiver, uint256(uint128(delta.amount1())));
+            } else {
+                console2.log("wrapping amount0 to receiver ", uint256(uint128(delta.amount0())));
+                confidentialERC20Wrapper0.wrapFromHook(eSwapParams.receiver, uint256(uint128(delta.amount0())));
+            }
+            console2.log("delta", delta.amount0());
+            console2.log("delta", delta.amount1());
+            console2.log("=================");
+            return true;
+        } catch (bytes memory) {
+            console2.log("error swap failed");
+            console2.log("=================");
+            return false;
+        }
     }
 
     function runESwaps() public returns (bool) {
-        // todo: create function to run encrypted swaps for a block
+        locked = true;
+        if (lengthDecryptedBlocks() == 0) {
+            // no decrypted blocks to run
+            return true;
+        }
+        // get the first block in the decrypted orders queue
+        uint256 decryptedBlock = peekDecryptedBlocks();
+        // uint256 decryptedBlockState = blockDecryptedState[decryptedBlock];
+        uint256 length = queuedSwapsForBlock[decryptedBlock].length;
+        uint256 winnerIndex = blockArbAuctionWinnerDecryptedTxIndex[decryptedBlock];
+        console2.log("running winner swap");
+        runESwap(decryptedBlock, winnerIndex);
+        for (uint256 i = 0; i < length; i++) {
+            if (i == winnerIndex) {
+                console2.log("winner swap skip as already done");
+                continue;
+            }
+            console2.log("running swap number ", i);
+            runESwap(decryptedBlock, i);
+        }
+        // pop from decrypted orders queue and add to processed orders queue
+        popDecryptedBlocks();
+        pushProcessedBlock(decryptedBlock);
+        locked = false;
         return true;
+    }
+
+    function transferToConfidentialERC20Wrapper(address from, uint256 amount) external {
+        bool isWrapperForToken0 = address(msg.sender) == address(confidentialERC20Wrapper0);
+        bool isWrapperForToken1 = address(msg.sender) == address(confidentialERC20Wrapper1);
+        require(
+            isWrapperForToken0 || isWrapperForToken1,
+            "Only confidentialERC20Wrapper0 or confidentialERC20Wrapper1 can call this function"
+        );
+        address baseToken = isWrapperForToken0
+            ? address(confidentialERC20Wrapper0.baseERC20())
+            : address(confidentialERC20Wrapper1.baseERC20());
+        address wrapper = isWrapperForToken0 ? address(confidentialERC20Wrapper0) : address(confidentialERC20Wrapper1);
+        IERC20(baseToken).transferFrom(from, wrapper, amount);
+    }
+
+    function transferDisabled(address user) external view returns (bool) {
+        return activeSwaps[user] > 0;
     }
 
     function getHookPermissions() public pure override returns (Hooks.Permissions memory) {
@@ -283,12 +458,6 @@ contract Juni is BaseHook, Blocks, IHook {
                 afterRemoveLiquidityReturnDelta: false
             });
     }
-
-    function transferDisabled(address user) external view returns (bool) {
-        return false;
-    }
-
-    function transferToConfidentialERC20Wrapper(address from, uint256 amount) external {}
 
     function getNthBit(uint256 _number, uint256 _n) public pure returns (uint256) {
         require(_n < 256, "Bit index out of bounds (0-255)");

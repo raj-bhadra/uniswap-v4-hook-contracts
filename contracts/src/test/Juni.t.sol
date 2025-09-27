@@ -24,8 +24,11 @@ import {GWEI} from "@inco/shared/src/TypeUtils.sol";
 
 import {EasyPosm} from "./utils/libraries/EasyPosm.sol";
 import {Deployers} from "./utils/Deployers.sol";
+import {ConfidentialERC20Wrapper} from "../ConfidentialERC20Wrapper.sol";
 import {Juni} from "../Juni.sol";
 import {console2} from "forge-std/console2.sol";
+import {ESwapInputParams} from "../ESwapParams.sol";
+import {LPRewardVault} from "../LPRewardVault.sol";
 
 contract JuniTest is IncoTest, Deployers {
     using EasyPosm for IPositionManager;
@@ -39,6 +42,9 @@ contract JuniTest is IncoTest, Deployers {
 
     Currency currency0;
     Currency currency1;
+    ConfidentialERC20Wrapper confidentialERC20Wrapper0;
+    ConfidentialERC20Wrapper confidentialERC20Wrapper1;
+    LPRewardVault lpRewardVault;
     PoolKey poolKey;
 
     Juni hook;
@@ -54,15 +60,29 @@ contract JuniTest is IncoTest, Deployers {
         // Deploys all required artifacts.
         deployArtifacts();
 
-        (currency0, currency1, , , ) = deployCurrencyPair();
+        (
+            currency0,
+            currency1,
+            confidentialERC20Wrapper0,
+            confidentialERC20Wrapper1,
+            lpRewardVault
+        ) = deployCurrencyPair();
 
         // Deploy the hook to an address with the correct flags
         address flags = address(
             uint160(Hooks.BEFORE_SWAP_FLAG | Hooks.BEFORE_INITIALIZE_FLAG | Hooks.AFTER_SWAP_FLAG) ^ (0x4444 << 144) // Namespace the hook to avoid collisions
         );
-        bytes memory constructorArgs = abi.encode(poolManager); // Add all the necessary constructor arguments from the hook
+        bytes memory constructorArgs = abi.encode(
+            poolManager,
+            swapRouter,
+            confidentialERC20Wrapper0,
+            confidentialERC20Wrapper1,
+            lpRewardVault
+        ); // Add all the necessary constructor arguments from the hook
         deployCodeTo("Juni.sol:Juni", constructorArgs, flags);
         hook = Juni(flags);
+        confidentialERC20Wrapper0.setHook(hook);
+        confidentialERC20Wrapper1.setHook(hook);
 
         // Create the pool
         poolKey = PoolKey(currency0, currency1, 3000, 60, IHooks(hook));
@@ -106,19 +126,84 @@ contract JuniTest is IncoTest, Deployers {
         );
     }
 
-    function testBasicSwap() public {
-        // Perform a test swap //
-        uint256 amountIn = 1e18;
-        BalanceDelta swapDelta = swapRouter.swapExactTokensForTokens({
-            amountIn: amountIn,
-            amountOutMin: 0, // Very bad, but we want to allow for unlimited price impact
-            zeroForOne: true,
-            poolKey: poolKey,
-            hookData: Constants.ZERO_BYTES,
-            receiver: address(this),
-            deadline: block.timestamp + 1
+    function testJuniHooks() public {
+        // bytes memory encryptedZeroForOne = fakePrepareEboolCiphertext(false);
+        // bytes memory encryptedZeroForOne2 = fakePrepareEboolCiphertext(true);
+        // bytes memory encryptedZeroForOne3 = fakePrepareEboolCiphertext(false);
+        // Approve hook also
+        ebool eZeroForOne1 = (false).asEbool();
+        ebool eZeroForOne2 = (true).asEbool();
+        ebool eZeroForOne3 = (false).asEbool();
+        euint256 arbAuctionFee1 = uint256(1000).asEuint256();
+        euint256 arbAuctionFee2 = uint256(1).asEuint256();
+        euint256 arbAuctionFee3 = uint256(10000).asEuint256();
+        euint256 eAmountInTransform1 = uint256(4).asEuint256();
+        euint256 eAmountInTransform2 = uint256(0).asEuint256();
+        euint256 eAmountInTransform3 = uint256(0).asEuint256();
+        eZeroForOne1.allow(address(hook));
+        eZeroForOne2.allow(address(hook));
+        eZeroForOne3.allow(address(hook));
+        arbAuctionFee1.allow(address(hook));
+        arbAuctionFee2.allow(address(hook));
+        arbAuctionFee3.allow(address(hook));
+        eAmountInTransform1.allow(address(hook));
+        eAmountInTransform2.allow(address(hook));
+        eAmountInTransform3.allow(address(hook));
+        IERC20(address(uint160(currency0.toId()))).approve(address(hook), 1e21);
+        IERC20(address(uint160(currency1.toId()))).approve(address(hook), 1e21);
+        confidentialERC20Wrapper0.wrap(1e17);
+        confidentialERC20Wrapper1.wrap(1e17);
+        // Approve hook also
+        uint256 amountInOne = 1e19;
+        uint256 amountInTwo = 1e15;
+        uint256 amountInThree = 1e15;
+        hook.addESwap({
+            params: ESwapInputParams({
+                creator: address(this),
+                receiver: address(this),
+                eZeroForOneInput: eZeroForOne1,
+                arbAuctionFeeInput: arbAuctionFee1,
+                eAmountInTransform: eAmountInTransform1,
+                amountIn: amountInOne,
+                sqrtPriceLimitX96: 0,
+                deadline: block.timestamp + 1
+            })
         });
 
-        assertEq(int256(swapDelta.amount0()), -int256(amountIn));
+        hook.addESwap({
+            params: ESwapInputParams({
+                creator: address(this),
+                receiver: address(this),
+                eZeroForOneInput: eZeroForOne2,
+                arbAuctionFeeInput: arbAuctionFee2,
+                eAmountInTransform: eAmountInTransform2,
+                amountIn: amountInTwo,
+                sqrtPriceLimitX96: 0,
+                deadline: block.timestamp + 1
+            })
+        });
+
+        hook.addESwap({
+            params: ESwapInputParams({
+                creator: address(this),
+                receiver: address(this),
+                eZeroForOneInput: eZeroForOne3,
+                arbAuctionFeeInput: arbAuctionFee3,
+                eAmountInTransform: eAmountInTransform3,
+                amountIn: amountInThree,
+                sqrtPriceLimitX96: 0,
+                deadline: block.timestamp + 1
+            })
+        });
+        vm.roll(block.number + 1);
+        hook.requestDecryptionForEarliestEncryptedBlock();
+        processAllOperations();
+
+        hook.runESwaps();
+        (uint256 balance0, uint256 balance1) = lpRewardVault.getBalances();
+        console2.log("balance0", balance0);
+        console2.log("balance1", balance1);
+        assertEq(balance0, 0);
+        assertEq(balance1, 10000);
     }
 }
