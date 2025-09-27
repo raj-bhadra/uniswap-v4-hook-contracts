@@ -193,12 +193,65 @@ contract Juni is BaseHook, Blocks, IHook {
     }
 
     function requestDecryptionForBlock(uint256 blockNumber) public returns (bool) {
-        // todo: request decryption for a block
+        // this block should be the first block in the encrypted orders queue
+        require(peekEncryptedBlocks() == blockNumber, "Block not first in encrypted orders queue");
+        // block should be at least MIN_BLOCK_DELAY blocks in the past
+        require(
+            blockNumber <= block.number - MIN_BLOCK_DELAY,
+            "Block must be at least MIN_BLOCK_DELAY blocks in the past"
+        );
+        blockEncryptedState[blockNumber] = blockEncryptedState[blockNumber]
+            .shl(80)
+            .add(blockAmountInTransformEncrypted[blockNumber])
+            .shl(16)
+            .add(blockArbAuctionWinnerEncryptedTxIndex[blockNumber])
+            .shl(128)
+            .add(blockArbAuctionWinnerEncryptedTxAmount[blockNumber]);
+        blockEncryptedState[blockNumber].allow(address(this));
+        DecryptionParams memory decryptionParams = DecryptionParams({blockNumber: blockNumber});
+        if (!blockDecryptionRequested[blockNumber]) {
+            blockDecryptionRequested[blockNumber] = true;
+            pushDecryptionRequest(blockNumber);
+        }
+        blockEncryptedState[blockNumber].requestDecryption(
+            this.onDecryptionCallback.selector,
+            abi.encode(decryptionParams)
+        );
         return true;
     }
 
-    function onDecryptionCallback(uint256, bytes32 decryptedBlock, bytes memory data) external {
-        // todo: create a function to handle decrypted state callback for a block
+    function onDecryptionCallback(uint256, bytes32 decryptedBlockStateBytes, bytes memory data) external {
+        // this block should be the first block in the encryption requests queue
+        DecryptionParams memory decryptionParams = abi.decode(data, (DecryptionParams));
+        blockDecryptedState[decryptionParams.blockNumber] = uint256(decryptedBlockStateBytes);
+        console2.log("decrypted block state", blockDecryptedState[decryptionParams.blockNumber]);
+        blockArbAuctionWinnerDecryptedTxAmount[decryptionParams.blockNumber] = getFirst128Bits(
+            blockDecryptedState[decryptionParams.blockNumber]
+        );
+        console2.log(
+            "blockArbAuctionWinnerDecryptedTxAmount",
+            blockArbAuctionWinnerDecryptedTxAmount[decryptionParams.blockNumber]
+        );
+        blockDecryptedState[decryptionParams.blockNumber] = blockDecryptedState[decryptionParams.blockNumber] >> 128;
+        blockArbAuctionWinnerDecryptedTxIndex[decryptionParams.blockNumber] = getFirst16Bits(
+            blockDecryptedState[decryptionParams.blockNumber]
+        );
+        console2.log(
+            "blockArbAuctionWinnerDecryptedTxIndex",
+            blockArbAuctionWinnerDecryptedTxIndex[decryptionParams.blockNumber]
+        );
+        blockDecryptedState[decryptionParams.blockNumber] = blockDecryptedState[decryptionParams.blockNumber] >> 16;
+        blockAmountInTransformDecrypted[decryptionParams.blockNumber] = getFirst80Bits(
+            blockDecryptedState[decryptionParams.blockNumber]
+        );
+        console2.log("blockAmountInTransformDecrypted", blockAmountInTransformDecrypted[decryptionParams.blockNumber]);
+        blockDecryptedState[decryptionParams.blockNumber] = blockDecryptedState[decryptionParams.blockNumber] >> 80;
+
+        console2.log("remaining state ", blockDecryptedState[decryptionParams.blockNumber]);
+        blockSwapsDecrypted[decryptionParams.blockNumber] = true;
+        // pop from encrypted orders queue and add to decrypted orders queue
+        popEncryptedBlocks();
+        pushDecryptedBlock(decryptionParams.blockNumber);
     }
 
     function runESwap(uint256 decryptedBlock, uint256 i) public returns (bool) {
