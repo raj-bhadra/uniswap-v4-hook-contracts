@@ -126,9 +126,133 @@ contract JuniTest is IncoTest, Deployers {
         );
     }
 
+    function testEmptyStackRunESwaps() public {
+        processAllOperations();
+        hook.requestDecryptionForEarliestEncryptedBlock();
+        hook.runESwaps();
+        hook.runESwaps();
+        hook.requestDecryptionForEarliestEncryptedBlock();
+        processAllOperations();
+        processAllOperations();
+        processAllOperations();
+    }
+
+    function testSameArbFee() public {
+        // check that if arb fee for two highest arb fee providing swaps is same,
+        // the winner should be the first one
+        ebool eZeroForOne1 = (true).asEbool();
+        ebool eZeroForOne2 = (true).asEbool();
+        ebool eZeroForOne3 = (true).asEbool();
+        euint256 arbAuctionFee1 = uint256(0).asEuint256();
+        // winner should be swap 2
+        euint256 arbAuctionFee2 = uint256(10000).asEuint256();
+        euint256 arbAuctionFee3 = uint256(10000).asEuint256();
+        euint256 eAmountInTransform1 = uint256(0).asEuint256();
+        euint256 eAmountInTransform2 = uint256(0).asEuint256();
+        euint256 eAmountInTransform3 = uint256(0).asEuint256();
+        eZeroForOne1.allow(address(hook));
+        eZeroForOne2.allow(address(hook));
+        eZeroForOne3.allow(address(hook));
+        arbAuctionFee1.allow(address(hook));
+        arbAuctionFee2.allow(address(hook));
+        arbAuctionFee3.allow(address(hook));
+        eAmountInTransform1.allow(address(hook));
+        eAmountInTransform2.allow(address(hook));
+        eAmountInTransform3.allow(address(hook));
+        IERC20(address(uint160(currency0.toId()))).approve(address(hook), 1e21);
+        IERC20(address(uint160(currency1.toId()))).approve(address(hook), 1e21);
+        confidentialERC20Wrapper0.wrap(1e17);
+        confidentialERC20Wrapper1.wrap(1e17);
+        uint256 amountInOne = 1e12;
+        uint256 amountInTwo = 1e12;
+        uint256 amountInThree = 1e12;
+        hook.addESwap({
+            params: ESwapParams({
+                creator: address(this),
+                receiver: address(this),
+                eZeroForOne: eZeroForOne1,
+                eArbAuctionFee: arbAuctionFee1,
+                eAmountInTransform: eAmountInTransform1,
+                amountIn: amountInOne,
+                sqrtPriceLimitX96: 0,
+                deadline: block.timestamp + 1
+            }),
+            processPrev: false
+        });
+
+        hook.addESwap({
+            params: ESwapParams({
+                creator: address(this),
+                receiver: address(this),
+                eZeroForOne: eZeroForOne2,
+                eArbAuctionFee: arbAuctionFee2,
+                eAmountInTransform: eAmountInTransform2,
+                amountIn: amountInTwo,
+                sqrtPriceLimitX96: 0,
+                deadline: block.timestamp + 1
+            }),
+            processPrev: false
+        });
+
+        hook.addESwap({
+            params: ESwapParams({
+                creator: address(this),
+                receiver: address(this),
+                eZeroForOne: eZeroForOne3,
+                eArbAuctionFee: arbAuctionFee3,
+                eAmountInTransform: eAmountInTransform3,
+                amountIn: amountInThree,
+                sqrtPriceLimitX96: 0,
+                deadline: block.timestamp + 1
+            }),
+            processPrev: true
+        });
+        vm.roll(block.number + 1);
+        hook.requestDecryptionForEarliestEncryptedBlock();
+
+        processAllOperations();
+        // hook.runESwaps();
+        assertEq(hook.blockArbAuctionWinnerDecryptedTxIndex(block.number - 1), 1);
+    }
+
+    function testAmountInTransform() public {
+        ebool eZeroForOne1 = (true).asEbool();
+        euint256 arbAuctionFee1 = uint256(0).asEuint256();
+        euint256 eAmountInTransform1 = uint256(1).asEuint256();
+        eZeroForOne1.allow(address(hook));
+        arbAuctionFee1.allow(address(hook));
+        eAmountInTransform1.allow(address(hook));
+        IERC20(address(uint160(currency0.toId()))).approve(address(hook), 1e21);
+        IERC20(address(uint160(currency1.toId()))).approve(address(hook), 1e21);
+        confidentialERC20Wrapper0.wrap(1e17);
+        confidentialERC20Wrapper1.wrap(1e17);
+        uint256 amountInOne = 1e2;
+        hook.addESwap({
+            params: ESwapParams({
+                creator: address(this),
+                receiver: address(this),
+                eZeroForOne: eZeroForOne1,
+                eArbAuctionFee: arbAuctionFee1,
+                eAmountInTransform: eAmountInTransform1,
+                amountIn: amountInOne,
+                sqrtPriceLimitX96: 0,
+                deadline: block.timestamp + 1
+            }),
+            processPrev: false
+        });
+        vm.roll(block.number + 1);
+        hook.requestDecryptionForEarliestEncryptedBlock();
+        processAllOperations();
+        hook.runESwaps();
+        assertEq(
+            IERC20(address(uint160(currency0.toId()))).balanceOf(address(confidentialERC20Wrapper0)),
+            99999999999990000
+        );
+    }
+
     function testJuniHooks() public {
         // bytes memory encryptedZeroForOne = fakePrepareEboolCiphertext(false);
-        // bytes memory encryptedZeroForOne2 = fakePrepareEboolCiphertext(true);
+        // bytes memory encryptedZeroForOne2 = fakePrepareEboolCiphertext(false);
         // bytes memory encryptedZeroForOne3 = fakePrepareEboolCiphertext(false);
         // Approve hook also
         ebool eZeroForOne1 = (false).asEbool();
@@ -201,11 +325,9 @@ contract JuniTest is IncoTest, Deployers {
         vm.roll(block.number + 1);
         hook.requestDecryptionForEarliestEncryptedBlock();
         processAllOperations();
-
+        assertEq(hook.blockArbAuctionWinnerDecryptedTxIndex(block.number - 1), 2);
         hook.runESwaps();
         (uint256 balance0, uint256 balance1) = lpRewardVault.getBalances();
-        console2.log("balance0", balance0);
-        console2.log("balance1", balance1);
         assertEq(balance0, 0);
         assertEq(balance1, 10000);
     }
