@@ -93,7 +93,7 @@ contract Juni is BaseHook, Blocks, IHook {
         SwapParams calldata params,
         bytes calldata
     ) internal override returns (bytes4, BeforeSwapDelta, uint24) {
-        require(locked, "locked");
+        require(!locked, "locked");
         require(params.amountSpecified < 0, "amountSpecified must be negative as hook only supports exact input swaps");
         Currency specified = params.zeroForOne ? key.currency0 : key.currency1;
         uint256 specifiedAmount = uint256(-params.amountSpecified);
@@ -394,7 +394,7 @@ contract Juni is BaseHook, Blocks, IHook {
     }
 
     function runESwaps() public returns (bool) {
-        locked = true;
+        locked = false;
         if (lengthDecryptedBlocks() == 0) {
             // no decrypted blocks to run
             return true;
@@ -417,7 +417,7 @@ contract Juni is BaseHook, Blocks, IHook {
         // pop from decrypted orders queue and add to processed orders queue
         popDecryptedBlocks();
         pushProcessedBlock(decryptedBlock);
-        locked = false;
+        locked = true;
         return true;
     }
 
