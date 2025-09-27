@@ -4,7 +4,8 @@ pragma solidity ^0.8.26;
 import {Test} from "forge-std/Test.sol";
 
 import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
-
+import {ConfidentialERC20Wrapper} from "../../ConfidentialERC20Wrapper.sol";
+import {LPRewardVault} from "../../LPRewardVault.sol";
 import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
 
 import {IPermit2} from "permit2/src/interfaces/IPermit2.sol";
@@ -18,6 +19,7 @@ import {Permit2Deployer} from "hookmate/artifacts/Permit2.sol";
 import {V4PoolManagerDeployer} from "hookmate/artifacts/V4PoolManager.sol";
 import {V4PositionManagerDeployer} from "hookmate/artifacts/V4PositionManager.sol";
 import {V4RouterDeployer} from "hookmate/artifacts/V4Router.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * Base Deployer Contract for Hook Testing
@@ -36,9 +38,11 @@ contract Deployers is Test {
     IPositionManager positionManager;
     IUniswapV4Router04 swapRouter;
 
-    function deployToken() internal returns (MockERC20 token) {
+    function deployToken() internal returns (MockERC20 token, ConfidentialERC20Wrapper confidentialERC20Wrapper) {
         token = new MockERC20("Test Token", "TEST", 18);
         token.mint(address(this), 10_000_000 ether);
+
+        confidentialERC20Wrapper = new ConfidentialERC20Wrapper(address(token));
 
         token.approve(address(permit2), type(uint256).max);
         token.approve(address(swapRouter), type(uint256).max);
@@ -47,19 +51,41 @@ contract Deployers is Test {
         permit2.approve(address(token), address(poolManager), type(uint160).max, type(uint48).max);
     }
 
-    function deployCurrencyPair() internal returns (Currency currency0, Currency currency1) {
-        MockERC20 token0 = deployToken();
-        MockERC20 token1 = deployToken();
+    function deployCurrencyPair()
+        internal
+        returns (
+            Currency currency0,
+            Currency currency1,
+            ConfidentialERC20Wrapper confidentialERC20Wrapper0,
+            ConfidentialERC20Wrapper confidentialERC20Wrapper1,
+            LPRewardVault lpRewardVault
+        )
+    {
+        (MockERC20 token0, ConfidentialERC20Wrapper confidentialERC20WrapperToken0) = deployToken();
+        (MockERC20 token1, ConfidentialERC20Wrapper confidentialERC20WrapperToken1) = deployToken();
+
+        confidentialERC20Wrapper0 = confidentialERC20WrapperToken0;
+        confidentialERC20Wrapper1 = confidentialERC20WrapperToken1;
 
         if (token0 > token1) {
-            (token0, token1) = (token1, token0);
+            (token0, token1, confidentialERC20Wrapper0, confidentialERC20Wrapper1) = (
+                token1,
+                token0,
+                confidentialERC20WrapperToken1,
+                confidentialERC20WrapperToken0
+            );
         }
 
         currency0 = Currency.wrap(address(token0));
         currency1 = Currency.wrap(address(token1));
 
+        lpRewardVault = new LPRewardVault(address(token0), address(token1));
+
         vm.label(address(token0), "Currency0");
         vm.label(address(token1), "Currency1");
+        vm.label(address(confidentialERC20Wrapper0), "ConfidentialERC20Wrapper0");
+        vm.label(address(confidentialERC20Wrapper1), "ConfidentialERC20Wrapper1");
+        vm.label(address(lpRewardVault), "LPRewardVault");
     }
 
     function deployPermit2() internal {
