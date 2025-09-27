@@ -27,7 +27,7 @@ import {Deployers} from "./utils/Deployers.sol";
 import {ConfidentialERC20Wrapper} from "../ConfidentialERC20Wrapper.sol";
 import {Juni} from "../Juni.sol";
 import {console2} from "forge-std/console2.sol";
-import {ESwapInputParams} from "../ESwapParams.sol";
+import {ESwapParams} from "../ESwapParams.sol";
 import {LPRewardVault} from "../LPRewardVault.sol";
 
 contract JuniTest is IncoTest, Deployers {
@@ -158,42 +158,45 @@ contract JuniTest is IncoTest, Deployers {
         uint256 amountInTwo = 1e15;
         uint256 amountInThree = 1e15;
         hook.addESwap({
-            params: ESwapInputParams({
+            params: ESwapParams({
                 creator: address(this),
                 receiver: address(this),
-                eZeroForOneInput: eZeroForOne1,
-                eArbAuctionFeeInput: arbAuctionFee1,
+                eZeroForOne: eZeroForOne1,
+                eArbAuctionFee: arbAuctionFee1,
                 eAmountInTransform: eAmountInTransform1,
                 amountIn: amountInOne,
                 sqrtPriceLimitX96: 0,
                 deadline: block.timestamp + 1
-            })
+            }),
+            processPrev: false
         });
 
         hook.addESwap({
-            params: ESwapInputParams({
+            params: ESwapParams({
                 creator: address(this),
                 receiver: address(this),
-                eZeroForOneInput: eZeroForOne2,
-                eArbAuctionFeeInput: arbAuctionFee2,
+                eZeroForOne: eZeroForOne2,
+                eArbAuctionFee: arbAuctionFee2,
                 eAmountInTransform: eAmountInTransform2,
                 amountIn: amountInTwo,
                 sqrtPriceLimitX96: 0,
                 deadline: block.timestamp + 1
-            })
+            }),
+            processPrev: false
         });
 
         hook.addESwap({
-            params: ESwapInputParams({
+            params: ESwapParams({
                 creator: address(this),
                 receiver: address(this),
-                eZeroForOneInput: eZeroForOne3,
-                eArbAuctionFeeInput: arbAuctionFee3,
+                eZeroForOne: eZeroForOne3,
+                eArbAuctionFee: arbAuctionFee3,
                 eAmountInTransform: eAmountInTransform3,
                 amountIn: amountInThree,
                 sqrtPriceLimitX96: 0,
                 deadline: block.timestamp + 1
-            })
+            }),
+            processPrev: true
         });
         vm.roll(block.number + 1);
         hook.requestDecryptionForEarliestEncryptedBlock();

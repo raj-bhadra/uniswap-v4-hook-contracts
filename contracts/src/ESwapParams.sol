@@ -9,9 +9,9 @@ import {ebool, euint256} from "@inco/lightning/src/Lib.sol";
 struct ESwapInputParams {
     address creator;
     address receiver;
-    ebool eZeroForOneInput;
-    euint256 eArbAuctionFeeInput;
-    euint256 eAmountInTransform;
+    bytes eZeroForOneInput;
+    bytes eArbAuctionFeeInput;
+    bytes eAmountInTransform;
     uint256 amountIn;
     uint160 sqrtPriceLimitX96;
     uint256 deadline;
@@ -21,19 +21,8 @@ struct ESwapParams {
     address creator;
     address receiver;
     ebool eZeroForOne;
-    euint256 arbAuctionFee;
+    euint256 eArbAuctionFee;
     euint256 eAmountInTransform;
-    uint256 amountIn;
-    uint160 sqrtPriceLimitX96;
-    uint256 deadline;
-}
-
-struct ESwapParamsEOA {
-    address creator;
-    address receiver;
-    bytes eZeroForOneInput;
-    bytes eArbAuctionFeeInput;
-    bytes eAmountInTransform;
     uint256 amountIn;
     uint160 sqrtPriceLimitX96;
     uint256 deadline;

@@ -187,16 +187,58 @@ contract Juni is BaseHook, Blocks, IHook {
         }
     }
 
-    function addESwap(ESwapInputParams calldata params) public returns (bool) {
-        params.eZeroForOneInput.allow(address(this));
-        params.eArbAuctionFeeInput.allow(address(this));
+    function addESwapEOA(ESwapInputParams calldata params, bool processPrev) public returns (bool) {
+        euint256 eZeroForOneNumber = params.eZeroForOneInput.newEuint256(address(this));
+        eZeroForOneNumber.allow(address(this));
+        _addESwapInternal(
+            ESwapParams({
+                creator: params.creator,
+                receiver: params.receiver,
+                eZeroForOne: eZeroForOneNumber.eq(0),
+                eArbAuctionFee: params.eArbAuctionFeeInput.newEuint256(address(this)),
+                eAmountInTransform: params.eAmountInTransform.newEuint256(address(this)),
+                amountIn: params.amountIn,
+                sqrtPriceLimitX96: params.sqrtPriceLimitX96,
+                deadline: params.deadline
+            }),
+            processPrev
+        );
+        // process additional steps to help the hook process stuff
+        // part of the arb auction fee will be shared to compensate for gas cost
+        if (processPrev && lengthDecryptedBlocks() > 0) {
+            runESwaps();
+        } else if (processPrev && lengthEncryptedBlocks() > 1) {
+            requestDecryptionForEarliestEncryptedBlock();
+        } else if (processPrev) {
+            console2.log("Process Prev true but nothing to process");
+        }
+        return true;
+    }
+
+    function addESwap(ESwapParams calldata params, bool processPrev) public returns (bool) {
+        _addESwapInternal(params, processPrev);
+        // process additional steps to help the hook process stuff
+        // part of the arb auction fee will be shared to compensate for gas cost
+        if (processPrev && lengthDecryptedBlocks() > 0) {
+            runESwaps();
+        } else if (processPrev && lengthEncryptedBlocks() > 1) {
+            requestDecryptionForEarliestEncryptedBlock();
+        } else if (processPrev) {
+            console2.log("Process Prev true but nothing to process");
+        }
+        return true;
+    }
+
+    function _addESwapInternal(ESwapParams memory params, bool processPrev) internal returns (bool) {
+        params.eZeroForOne.allow(address(this));
+        params.eArbAuctionFee.allow(address(this));
         // check if any swaps are queued in the current block
         if (queuedSwapsForBlock[block.number].length == 0) {
             blockEncryptedState[block.number] = uint256(0).asEuint256();
             blockEncryptedState[block.number].allow(address(this));
             blockArbAuctionWinnerEncryptedTxIndex[block.number] = uint256(0).asEuint256();
             blockArbAuctionWinnerEncryptedTxIndex[block.number].allow(address(this));
-            blockArbAuctionWinnerEncryptedTxAmount[block.number] = params.eArbAuctionFeeInput;
+            blockArbAuctionWinnerEncryptedTxAmount[block.number] = params.eArbAuctionFee;
             blockArbAuctionWinnerEncryptedTxAmount[block.number].allow(address(this));
             blockAmountInTransformEncrypted[block.number] = params.eAmountInTransform;
             blockAmountInTransformEncrypted[block.number].allow(address(this));
@@ -204,7 +246,7 @@ contract Juni is BaseHook, Blocks, IHook {
             console2.log("pushed encrypted block", block.number);
         }
         require(queuedSwapsForBlock[block.number].length < MAX_QUEUE_PER_BLOCK, "Max queue per block reached");
-        blockEncryptedState[block.number] = params.eZeroForOneInput.select(
+        blockEncryptedState[block.number] = params.eZeroForOne.select(
             blockEncryptedState[block.number].shl(1),
             blockEncryptedState[block.number].shl(1).add(1)
         );
@@ -218,12 +260,12 @@ contract Juni is BaseHook, Blocks, IHook {
         eAmountInTransform.allow(address(this));
         euint256 eAmountIn = transformAmountIn(params.amountIn.asEuint256(), eAmountInTransform);
         eAmountIn.allow(address(this));
-        ebool isZeroAndHasEnoughBalance = params.eZeroForOneInput.and(
-            (confidentialERC20Wrapper0.getBalance(params.creator).ge(eAmountIn.add(params.eArbAuctionFeeInput)))
+        ebool isZeroAndHasEnoughBalance = params.eZeroForOne.and(
+            (confidentialERC20Wrapper0.getBalance(params.creator).ge(eAmountIn.add(params.eArbAuctionFee)))
         );
         isZeroAndHasEnoughBalance.allow(address(this));
-        ebool isOneAndHasEnoughBalance = e.not(params.eZeroForOneInput).and(
-            confidentialERC20Wrapper1.getBalance(params.creator).ge(eAmountIn.add(params.eArbAuctionFeeInput))
+        ebool isOneAndHasEnoughBalance = e.not(params.eZeroForOne).and(
+            confidentialERC20Wrapper1.getBalance(params.creator).ge(eAmountIn.add(params.eArbAuctionFee))
         );
         isOneAndHasEnoughBalance.allow(address(this));
         ebool hasEnoughBalance = isZeroAndHasEnoughBalance.or(isOneAndHasEnoughBalance);
@@ -234,7 +276,7 @@ contract Juni is BaseHook, Blocks, IHook {
         );
         // only transfer from zero hook if zero and has enough balance
         euint256 transferFromZeroToHook = isZeroAndHasEnoughBalance.select(
-            eAmountIn.add(params.eArbAuctionFeeInput),
+            eAmountIn.add(params.eArbAuctionFee),
             e.asEuint256(0)
         );
         // transferFromZeroToHook.allow(address(this));
@@ -243,14 +285,14 @@ contract Juni is BaseHook, Blocks, IHook {
 
         // only transfer from one hook if one and has enough balance
         euint256 transferFromOneToHook = isOneAndHasEnoughBalance.select(
-            eAmountIn.add(params.eArbAuctionFeeInput),
+            eAmountIn.add(params.eArbAuctionFee),
             e.asEuint256(0)
         );
         // transferFromOneToHook.allow(address(this));
         transferFromOneToHook.allow(address(confidentialERC20Wrapper1));
         confidentialERC20Wrapper1.transferToHook(params.creator, transferFromOneToHook);
 
-        ebool isCurrentArbFeeGreaterThanMaxArbAuctionFee = params.eArbAuctionFeeInput.gt(
+        ebool isCurrentArbFeeGreaterThanMaxArbAuctionFee = params.eArbAuctionFee.gt(
             blockArbAuctionWinnerEncryptedTxAmount[block.number]
         );
         euint256 currentBlockSwapLengthEncrypted = queuedSwapsForBlock[block.number].length.asEuint256();
@@ -261,20 +303,10 @@ contract Juni is BaseHook, Blocks, IHook {
         blockArbAuctionWinnerEncryptedTxIndex[block.number].allow(address(this));
         blockArbAuctionWinnerEncryptedTxAmount[block.number] = isCurrentArbFeeGreaterThanMaxArbAuctionFee
             .and(hasEnoughBalance)
-            .select(params.eArbAuctionFeeInput, blockArbAuctionWinnerEncryptedTxAmount[block.number]);
+            .select(params.eArbAuctionFee, blockArbAuctionWinnerEncryptedTxAmount[block.number]);
         blockArbAuctionWinnerEncryptedTxAmount[block.number].allow(address(this));
         uint256 currentBlock = block.number;
-        ESwapParams memory eSwapParams = ESwapParams({
-            creator: params.creator,
-            receiver: params.receiver,
-            eZeroForOne: params.eZeroForOneInput,
-            arbAuctionFee: params.eArbAuctionFeeInput,
-            eAmountInTransform: params.eAmountInTransform,
-            amountIn: params.amountIn,
-            sqrtPriceLimitX96: params.sqrtPriceLimitX96,
-            deadline: params.deadline
-        });
-        queuedSwapsForBlock[currentBlock].push(eSwapParams);
+        queuedSwapsForBlock[currentBlock].push(params);
         activeSwaps[params.creator]++;
         return true;
     }
