@@ -12,9 +12,9 @@ contract DeployToken is Script {
     function run() public {
         vm.startBroadcast();
         MockERC20 token0 = new MockERC20("Test Token", "TEST", 18);
-        // token0.mint(address(this), 10_000_000 ether);
+        token0.mint(address(this), 10_000_000 ether);
         MockERC20 token1 = new MockERC20("Test Token", "TEST", 18);
-        //token1.mint(address(this), 10_000_000 ether);
+        token1.mint(address(this), 10_000_000 ether);
         ConfidentialERC20Wrapper confidentialERC20Wrapper0 = new ConfidentialERC20Wrapper(address(token0));
         ConfidentialERC20Wrapper confidentialERC20Wrapper1 = new ConfidentialERC20Wrapper(address(token1));
         if (address(token0) < address(token1)) {

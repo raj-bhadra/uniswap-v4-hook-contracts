@@ -12,6 +12,7 @@ import {IPermit2} from "permit2/src/interfaces/IPermit2.sol";
 
 import {IUniswapV4Router04} from "hookmate/interfaces/router/IUniswapV4Router04.sol";
 import {AddressConstants} from "hookmate/constants/AddressConstants.sol";
+import {ConfidentialERC20Wrapper} from "../../src/ConfidentialERC20Wrapper.sol";
 
 /// @notice Shared configuration between scripts
 contract BaseScript is Script {
@@ -24,9 +25,17 @@ contract BaseScript is Script {
     /////////////////////////////////////
     // --- Configure These ---
     /////////////////////////////////////
-    IERC20 internal constant token0 = IERC20(0x0165878A594ca255338adfa4d48449f69242Eb8F);
-    IERC20 internal constant token1 = IERC20(0xa513E6E4b8f2a923D98304ec87F64353C4D5C853);
-    IHooks constant hookContract = IHooks(address(0));
+    // IERC20 internal constant token0 = IERC20(0x0165878A594ca255338adfa4d48449f69242Eb8F);
+    IERC20 internal constant token0 = IERC20(0x65601e5107121948e809822565Ac843D54c2A073);
+    // IERC20 internal constant token1 = IERC20(0xa513E6E4b8f2a923D98304ec87F64353C4D5C853);
+    IERC20 internal constant token1 = IERC20(0xCC1d49357ABa7f91328e6df60dFC6D09914c9F0E);
+
+    ConfidentialERC20Wrapper internal constant confidentialERC20Wrapper0 =
+        ConfidentialERC20Wrapper(0x49F8771001b42943866cc77A41858A565a12Bd48);
+
+    ConfidentialERC20Wrapper internal constant confidentialERC20Wrapper1 =
+        ConfidentialERC20Wrapper(0xC338C360C1f71a03a06599e26D9E2079a19F3bc1);
+    IHooks constant hookContract = IHooks(0xf47d8c9D3460acd39B4691A859BC7385D39ee0C0);
     /////////////////////////////////////
 
     Currency immutable currency0;
