@@ -10,7 +10,7 @@ struct ESwapInputParams {
     address creator;
     address receiver;
     ebool eZeroForOneInput;
-    euint256 arbAuctionFeeInput;
+    euint256 eArbAuctionFeeInput;
     euint256 eAmountInTransform;
     uint256 amountIn;
     uint160 sqrtPriceLimitX96;
@@ -23,6 +23,17 @@ struct ESwapParams {
     ebool eZeroForOne;
     euint256 arbAuctionFee;
     euint256 eAmountInTransform;
+    uint256 amountIn;
+    uint160 sqrtPriceLimitX96;
+    uint256 deadline;
+}
+
+struct ESwapParamsEOA {
+    address creator;
+    address receiver;
+    bytes eZeroForOneInput;
+    bytes eArbAuctionFeeInput;
+    bytes eAmountInTransform;
     uint256 amountIn;
     uint160 sqrtPriceLimitX96;
     uint256 deadline;

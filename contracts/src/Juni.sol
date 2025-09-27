@@ -30,9 +30,12 @@ contract Juni is BaseHook, Blocks, IHook {
     using e for address;
     using e for uint256;
 
+    // requrired to run e swaps
     IUniswapV4Router04 public swapRouter;
+    // required to make sure only one pool is linked to the hook
     bool public initialized;
     PoolKey public poolKey;
+    // locks the pool from being used for non e swaps
     bool public locked = true;
     mapping(uint256 => bool) public blockDecryptionRequested;
     // Indicates whether a block number has one or more decrypted swaps present
@@ -49,8 +52,12 @@ contract Juni is BaseHook, Blocks, IHook {
     mapping(uint256 => uint256) public blockArbAuctionWinnerDecryptedTxAmount;
     mapping(uint256 => uint256) public blockDecryptedState;
 
+    // max number of e swaps that can be added in a block
+    // this makes sure that the decryption state fits in a single uint256
     uint256 public constant MAX_QUEUE_PER_BLOCK = 16;
+    // min block delay to allow decryption for an encrypted block
     uint256 public constant MIN_BLOCK_DELAY = 1;
+    // number of active swaps for a creator
     mapping(address => uint256) public activeSwaps;
     ConfidentialERC20Wrapper public confidentialERC20Wrapper0;
     ConfidentialERC20Wrapper public confidentialERC20Wrapper1;
@@ -80,7 +87,6 @@ contract Juni is BaseHook, Blocks, IHook {
     }
 
     function _beforeInitialize(address, PoolKey calldata _poolKey, uint160) internal override returns (bytes4) {
-        // require that pool key should not be already set
         require(!initialized, "Only one pool can be initialized");
         poolKey = _poolKey;
         initialized = true;
@@ -94,9 +100,11 @@ contract Juni is BaseHook, Blocks, IHook {
         bytes calldata
     ) internal override returns (bytes4, BeforeSwapDelta, uint24) {
         require(!locked, "locked");
+        // exact input swaps are required for e swaps to make sure the swap has enough amount inside cerc
         require(params.amountSpecified < 0, "amountSpecified must be negative as hook only supports exact input swaps");
         Currency specified = params.zeroForOne ? key.currency0 : key.currency1;
         uint256 specifiedAmount = uint256(-params.amountSpecified);
+        // convert cerc 20 balance of hook to erc20 balance
         if (params.zeroForOne) {
             console2.log("extracting base token to hook for token0 ", specifiedAmount);
             confidentialERC20Wrapper0.extractBaseTokenToHook(specifiedAmount);
@@ -106,6 +114,7 @@ contract Juni is BaseHook, Blocks, IHook {
             confidentialERC20Wrapper1.extractBaseTokenToHook(specifiedAmount);
             console2.log("extracted base token to hook for token1 ", specifiedAmount);
         }
+        // Approve swap router to access erc20 token from hook balance
         IERC20(address(uint160(specified.toId()))).approve(address(swapRouter), specifiedAmount);
         return (this.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, 0);
     }
@@ -123,6 +132,7 @@ contract Juni is BaseHook, Blocks, IHook {
             console2.log("winner tx");
             console2.log("txIndex", eSwapRunInfo.txIndex);
             console2.log("arbAuctionFee", eSwapRunInfo.arbAuctionFee);
+            // if winner, transfer cerc balance from hook to lp reward vault
             if (params.zeroForOne) {
                 console2.log("Paying Arb Auction Fee in token0", eSwapRunInfo.arbAuctionFee);
                 confidentialERC20Wrapper0.extractBaseTokenToHook(eSwapRunInfo.arbAuctionFee);
@@ -142,11 +152,13 @@ contract Juni is BaseHook, Blocks, IHook {
         return (this.afterSwap.selector, 0);
     }
 
-    // if 1, multiply by 100
-    // if 2, multiply by 100,000
-    // if 3, divide by 100
-    // if 4, divide by 100,000
+    // Amount In transform helps mask the quantity of token and the token in in case of pairs
+    // with very low or very high price
     function transformAmountIn(euint256 amountIn, euint256 eAmountInTransform) internal returns (euint256) {
+        // if 1, multiply by 100
+        // if 2, multiply by 100,000
+        // if 3, divide by 100
+        // if 4, divide by 100,000
         amountIn = eAmountInTransform.eq(1).select(amountIn.mul(uint256(100).asEuint256()), amountIn);
         amountIn = eAmountInTransform.eq(2).select(amountIn.mul(uint256(100000).asEuint256()), amountIn);
         amountIn = eAmountInTransform.eq(3).select(amountIn.div(uint256(100).asEuint256()), amountIn);
@@ -155,6 +167,12 @@ contract Juni is BaseHook, Blocks, IHook {
         return amountIn;
     }
 
+    // Transform the amount in before conducting the swap using the decrypted value of amountInTransform
+    // For example, if amountIn was supposed to be 100, and amountInTransform was 1, then the amount in
+    // sent in the request would be 100/100 which would be 1
+    // For example, in usdc btc pool, if someone sent amount in as 10,000 it would be easy to guess that
+    // the token in is usdc even if zero for one is true. With amount in transform, the amount in can be transformed
+    // to 0.1 by setting transform to 2 and 4 for reverse usage
     function transformAmountInDecrypted(uint256 amountIn, uint256 amountInTransform) internal pure returns (uint256) {
         if (amountInTransform == uint256(1)) {
             return amountIn * uint256(100);
@@ -171,14 +189,14 @@ contract Juni is BaseHook, Blocks, IHook {
 
     function addESwap(ESwapInputParams calldata params) public returns (bool) {
         params.eZeroForOneInput.allow(address(this));
-        params.arbAuctionFeeInput.allow(address(this));
+        params.eArbAuctionFeeInput.allow(address(this));
         // check if any swaps are queued in the current block
         if (queuedSwapsForBlock[block.number].length == 0) {
             blockEncryptedState[block.number] = uint256(0).asEuint256();
             blockEncryptedState[block.number].allow(address(this));
             blockArbAuctionWinnerEncryptedTxIndex[block.number] = uint256(0).asEuint256();
             blockArbAuctionWinnerEncryptedTxIndex[block.number].allow(address(this));
-            blockArbAuctionWinnerEncryptedTxAmount[block.number] = params.arbAuctionFeeInput;
+            blockArbAuctionWinnerEncryptedTxAmount[block.number] = params.eArbAuctionFeeInput;
             blockArbAuctionWinnerEncryptedTxAmount[block.number].allow(address(this));
             blockAmountInTransformEncrypted[block.number] = params.eAmountInTransform;
             blockAmountInTransformEncrypted[block.number].allow(address(this));
@@ -201,11 +219,11 @@ contract Juni is BaseHook, Blocks, IHook {
         euint256 eAmountIn = transformAmountIn(params.amountIn.asEuint256(), eAmountInTransform);
         eAmountIn.allow(address(this));
         ebool isZeroAndHasEnoughBalance = params.eZeroForOneInput.and(
-            (confidentialERC20Wrapper0.getBalance(params.creator).ge(eAmountIn.add(params.arbAuctionFeeInput)))
+            (confidentialERC20Wrapper0.getBalance(params.creator).ge(eAmountIn.add(params.eArbAuctionFeeInput)))
         );
         isZeroAndHasEnoughBalance.allow(address(this));
         ebool isOneAndHasEnoughBalance = e.not(params.eZeroForOneInput).and(
-            confidentialERC20Wrapper1.getBalance(params.creator).ge(eAmountIn.add(params.arbAuctionFeeInput))
+            confidentialERC20Wrapper1.getBalance(params.creator).ge(eAmountIn.add(params.eArbAuctionFeeInput))
         );
         isOneAndHasEnoughBalance.allow(address(this));
         ebool hasEnoughBalance = isZeroAndHasEnoughBalance.or(isOneAndHasEnoughBalance);
@@ -216,7 +234,7 @@ contract Juni is BaseHook, Blocks, IHook {
         );
         // only transfer from zero hook if zero and has enough balance
         euint256 transferFromZeroToHook = isZeroAndHasEnoughBalance.select(
-            eAmountIn.add(params.arbAuctionFeeInput),
+            eAmountIn.add(params.eArbAuctionFeeInput),
             e.asEuint256(0)
         );
         // transferFromZeroToHook.allow(address(this));
@@ -225,14 +243,14 @@ contract Juni is BaseHook, Blocks, IHook {
 
         // only transfer from one hook if one and has enough balance
         euint256 transferFromOneToHook = isOneAndHasEnoughBalance.select(
-            eAmountIn.add(params.arbAuctionFeeInput),
+            eAmountIn.add(params.eArbAuctionFeeInput),
             e.asEuint256(0)
         );
         // transferFromOneToHook.allow(address(this));
         transferFromOneToHook.allow(address(confidentialERC20Wrapper1));
         confidentialERC20Wrapper1.transferToHook(params.creator, transferFromOneToHook);
 
-        ebool isCurrentArbFeeGreaterThanMaxArbAuctionFee = params.arbAuctionFeeInput.gt(
+        ebool isCurrentArbFeeGreaterThanMaxArbAuctionFee = params.eArbAuctionFeeInput.gt(
             blockArbAuctionWinnerEncryptedTxAmount[block.number]
         );
         euint256 currentBlockSwapLengthEncrypted = queuedSwapsForBlock[block.number].length.asEuint256();
@@ -243,14 +261,14 @@ contract Juni is BaseHook, Blocks, IHook {
         blockArbAuctionWinnerEncryptedTxIndex[block.number].allow(address(this));
         blockArbAuctionWinnerEncryptedTxAmount[block.number] = isCurrentArbFeeGreaterThanMaxArbAuctionFee
             .and(hasEnoughBalance)
-            .select(params.arbAuctionFeeInput, blockArbAuctionWinnerEncryptedTxAmount[block.number]);
+            .select(params.eArbAuctionFeeInput, blockArbAuctionWinnerEncryptedTxAmount[block.number]);
         blockArbAuctionWinnerEncryptedTxAmount[block.number].allow(address(this));
         uint256 currentBlock = block.number;
         ESwapParams memory eSwapParams = ESwapParams({
             creator: params.creator,
             receiver: params.receiver,
             eZeroForOne: params.eZeroForOneInput,
-            arbAuctionFee: params.arbAuctionFeeInput,
+            arbAuctionFee: params.eArbAuctionFeeInput,
             eAmountInTransform: params.eAmountInTransform,
             amountIn: params.amountIn,
             sqrtPriceLimitX96: params.sqrtPriceLimitX96,
