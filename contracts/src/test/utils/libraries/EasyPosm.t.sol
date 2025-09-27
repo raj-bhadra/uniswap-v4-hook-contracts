@@ -36,7 +36,7 @@ contract EasyPosmTest is Test, Deployers {
     function setUp() public {
         deployArtifacts();
 
-        (currency0, currency1) = deployCurrencyPair();
+        (currency0, currency1, , , ) = deployCurrencyPair();
 
         // Create the pool
         key = PoolKey(currency0, currency1, 3000, 60, IHooks(address(0)));

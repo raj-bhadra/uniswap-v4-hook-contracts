@@ -54,7 +54,7 @@ contract JuniTest is IncoTest, Deployers {
         // Deploys all required artifacts.
         deployArtifacts();
 
-        (currency0, currency1) = deployCurrencyPair();
+        (currency0, currency1, , , ) = deployCurrencyPair();
 
         // Deploy the hook to an address with the correct flags
         address flags = address(
