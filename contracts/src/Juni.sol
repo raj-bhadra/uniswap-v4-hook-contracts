@@ -19,6 +19,7 @@ import {Blocks} from "./Blocks.sol";
 import {ESwapInputParams, ESwapParams} from "./ESwapParams.sol";
 import {ConfidentialERC20Wrapper} from "./ConfidentialERC20Wrapper.sol";
 import {LPRewardVault} from "./LPRewardVault.sol";
+import {DecryptionParams} from "./DecryptionParams.sol";
 
 contract Juni is BaseHook, Blocks, IHook {
     using PoolIdLibrary for PoolKey;
@@ -288,4 +289,45 @@ contract Juni is BaseHook, Blocks, IHook {
     }
 
     function transferToConfidentialERC20Wrapper(address from, uint256 amount) external {}
+
+    function getNthBit(uint256 _number, uint256 _n) public pure returns (uint256) {
+        require(_n < 256, "Bit index out of bounds (0-255)");
+        return (_number >> _n) & 1;
+    }
+
+    function getFirst64Bits(uint256 value) public pure returns (uint64) {
+        // Create a mask with the first 64 bits set to 1
+        uint256 mask = (1 << 64) - 1;
+
+        // Apply the mask using bitwise AND
+        // The result is implicitly converted to uint64 if it fits
+        return uint64(value & mask);
+    }
+
+    function getFirst80Bits(uint256 value) public pure returns (uint80) {
+        // Create a mask with the first 80 bits set to 1
+        uint256 mask = (1 << 80) - 1;
+
+        // Apply the mask using bitwise AND
+        // The result is implicitly converted to uint80 if it fits
+        return uint80(value & mask);
+    }
+
+    function getFirst16Bits(uint256 value) public pure returns (uint16) {
+        // Create a mask with the first 16 bits set to 1
+        uint256 mask = (1 << 16) - 1;
+
+        // Apply the mask using bitwise AND
+        // The result is implicitly converted to uint16 if it fits
+        return uint16(value & mask);
+    }
+
+    function getFirst128Bits(uint256 value) public pure returns (uint128) {
+        // Create a mask with the first 128 bits set to 1
+        uint256 mask = (1 << 128) - 1;
+
+        // Apply the mask using bitwise AND
+        // The result is implicitly converted to uint128 if it fits
+        return uint128(value & mask);
+    }
 }
